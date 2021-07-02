@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Timesheet</title>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no;" />
+    <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+    <script
+    src="https://code.jquery.com/jquery-1.12.4.min.js"
+    integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ="
+    crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" type="text/css" href="Content/bootstrap.css">
+    <script type="text/javascript" src="js/SyncDB.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/index.js"></script>
+    <script src="js/daypilot-all.min.js" type="text/javascript"></script>
+
+    <script>
+        //document.addEventListener('deviceready', function () {
+        //    cordova.plugins.email.isAvailable(
+        //        function (isAvailable) {
+        //            alert("is email mobile available? " + (isAvailable ? "Yes" : "No"));
+        //            if (isAvailable) {
+        //                window.plugin.email.open({
+        //                    to: 'test@test.com',
+        //                    subject: 'Greetings',
+        //                    body: 'How are you? Nice greetings from Leipzig'
+        //                }, callback, scope);
+        //            }
+        //        }
+        //    );
+        //}, false);
+
+        //function callback() {
+        //    console.log("callback function");
+        //}
+
+        //function scope() {
+        //    console.log("scope function");
+        //}
+
+        function Logout() {
+            navigator.notification.confirm(
+               "Are you sure you want to logout?",
+                callBackFunction, // Specify a function to be called
+                'Logout',
+                ["Cancel", "Ok"]
+        );
+        }
+        function callBackFunction(b) {
+            if (b != 1) {
+                window.localStorage.removeItem("username");
+                window.localStorage.removeItem("password");
+
+                window.location.href = 'index.html';
+            }
+        }
+        function SyncData() {
+
+            GetJobDetails(localStorage.getItem("EngineerName"), localStorage.getItem("LastCheckinDate"));
+            //PopulateEvent();
+            window.localStorage.setItem("BreakCountBeforeCheckout", 0);
+            var loading = document.getElementById("loading");
+            loading.style.visibility = "visible";
+            var delayMillis = 3000; //3 seconds delay
+
+            setTimeout(function () {
+                loading.style.visibility = "hidden";
+                onLoad();
+            }, delayMillis);
+
+        }
+        function Reload() {
+            location.reload();
+        }
+    </script>
+
+    <script>
+        function SyncData1() {
+            var networkState = navigator.connection.type;
+            var states = {};
+            states[Connection.UNKNOWN] = 'Unknown connection';
+            states[Connection.ETHERNET] = 'Ethernet connection';
+            states[Connection.WIFI] = 'WiFi connection';
+            states[Connection.CELL_2G] = 'Cell 2G connection';
+            states[Connection.CELL_3G] = 'Cell 3G connection';
+            states[Connection.CELL_4G] = 'Cell 4G connection';
+            states[Connection.CELL] = 'Cell generic connection';
+            states[Connection.NONE] = 'No network connection';
+            //alert('Connection type: ' + states[networkState]);
+            if (states[networkState] != "No network connection" && states[networkState] != "Unknown connection") {
+                //GetJobDetails(localStorage.getItem("EngineerName"), localStorage.getItem("LastCheckinDate"));
+                //PopulateEvent();
+                //alert("Sync Done...");
+                //navigator.notification.alert('Sync Done...', {}, 'Sync', 'Ok');
+                return 1;
+            }
+            else {
+                //alert("You need a data connection to perform sync");
+                //navigator.notification.alert('You need a data connection to perform sync', {}, 'Sync Fail', 'Ok');
+                return 0;
+            }
+        }
+    </script>
+    <script>
+
+        function onLoad() {
+            document.getElementById("EngineerName").innerHTML = localStorage.getItem("EngineerName");
+            document.getElementById("Date").innerHTML = localStorage.getItem("LastCheckinDate");
+            //GetJobDetails(localStorage.getItem("EngineerName"), localStorage.getItem("LastCheckinDate")); // function call to retrieve data from the server
+
+            //console.log("Value: "+localStorage.getItem("hasCodeRunBefore"));
+            //if (localStorage.getItem("hasCodeRunBefore") === null) {
+            //  SyncData();
+            //    localStorage.setItem("hasCodeRunBefore", "TRUE")
+            //    Reload();
+            //}
+            PopulateEvent();
+            PopulateDropDown(localStorage.getItem("EngineerName"));
+            if (localStorage.getItem("VehicleStatus") != 0) {
+                var Event = document.getElementById("EventList");
+                var option = document.createElement("option");
+                option.text = "TRIP";
+                Event.add(option, Event[1]);
+            }
+
+            var dateArr = getDateArray(new Date(localStorage.getItem("MaxCheckinDate")), new Date(localStorage.getItem("LastCheckinDate")));
+            if (dateArr.length>0)
+                alert("Please note that timesheet information is missing for the following day(s): " + dateArr.join('\n'));
+
+        }
+    </script>
+
+
+
+</head>
+<body onload="SyncData();">
+    <br />
+    <div class="container body-content" style="font-family: Arial;">
+        <header>
+            <img src="img/logo.png" style="width:60%;height:9.30%" />
+            <br />
+            <br />
+        </header>
+
+
+        <b>Engineer Name: </b> <div id="EngineerName"> </div>
+        <b>Date: </b><div id="Date"></div>
+        <br />
+        <h3 id="CheckoutMessage" style="color:red; visibility:hidden">Please do not close the app during the checkout process.</h3>
+        <div class="row">
+            <input type="submit" id="Checkout" value="Check out" style="height:40px;width:45%" class="col-xs-6" onclick="Checkout()" disabled>
+
+            <input type="button" id="refres" value="Refresh Page" style="height:40px;width:45%;float:right" class="col-xs-6" onclick="Reload();"> <br />
+
+        </div>
+        <select id="hlistHR" style="display:none" ></select>
+        <select id="hlist" style="display:none" onchange="checkoutEvent();"></select>
+
+        <br /> <br />
+        <div id="myModal" class="modal" style="top:50%; left:30%; width:37%; height:150px">
+
+            <!-- Modal content -->
+            <div class="modal-content" style="padding-left:5px">
+                <span class="close">&times;</span>
+                <p>
+                    Please Select the Event:
+                    <select style="width:100px" id="EventList"></select>
+                </p>
+                <input type="submit" value="Submit" onclick="EventSelection()" />
+            </div>
+        </div>
+        <div id="myinnerModal" class="modal" style="top:50%; left:30%; width:37%; height:200px;">
+            <div class="modal-content" style="padding-left:5px">
+                <span class="close">&times;</span>
+                <p>
+                    Please enter the missing job number:
+                </p>
+                <input type="text" name="MoreInfo" id="MoreInfo" >
+                <br />
+
+                <input type="submit" value="Submit" onclick="AddAddtionalEvent()">
+            </div>
+        </div>
+        <img id="loading" src="img/loading.gif" style="visibility:hidden;" />
+
+        <img src="img/clear.png" style="float:right" onclick="ClearCalendar()"/>
+        <div id="dp" style="visibility:hidden">
+
+        </div>
+
+
+    </div>
+    <div id="footer">
+
+        <a href="javascript:Reload() " class="footerelem"><img src="img/sign-sync-icon.png" /></a>
+        <a href="javascript:window.location.href = 'About.html'" class="footerelem"><img src="img/FAQ-icon.png" /></a>
+        <a class="footerelem" href="tel://+44 0845 1177 999"><img src="img/04-Call-icon.png" /></a>
+        <a class="footerelem" href="javascript:Logout()"><img src="img/Lock-2-icon.png" /></a>
+
+    </div>
+
+    <script type="text/javascript">
+
+        var dp = new DayPilot.Calendar("dp");   // Day pilot calendar
+        dp.startDate = localStorage.getItem("LastCheckinDate");
+        dp.dayBeginsHour = 0;
+        dp.dayEndsHour = 24;
+        dp.cellHeight = 35;
+        dp.cellDuration = localStorage.getItem("CalendarMinutes");
+        dp.hourHalfBorderColor = "Red";
+        dp.useEventBoxes = "Never";
+        dp.autoRefreshInterval = 10;
+        dp.autoRefreshEnabled = true;
+        //dp.moveBy = "None";
+        dp.eventDeleteHandling = "Update";
+        dp.init();
+        var GlobalEvent;
+        var EngineerName = localStorage.getItem("EngineerName");
+        var CheckinDate = localStorage.getItem("LastCheckinDate");
+        var CheckinTime = localStorage.getItem("LastCheckinTime");
+        var modal = document.getElementById('myModal');
+        var span = document.getElementsByClassName("close")[0];
+        var span1 = document.getElementsByClassName("close")[1];
+        var modalinner = document.getElementById('myinnerModal');
+        var SelectedStartTime;
+        var SelectedEndTime;
+
+        function PopulateEvent() {
+            GetDayEvent(EngineerName, CheckinDate);
+            document.getElementById("Checkout").disabled = false;
+            GetVehicleStatus(EngineerName, CheckinDate);
+
+        }
+
+        function CreateEvent(event, starttimevalue, endtimevalue, addtionalinfo, addressinfo) {  // create the events and populate the calendar
+            event = event.trim()
+            var additionalinfoprint = null;
+            switch (event) {
+                case "START WORK": backColor = "LawnGreen";
+                    break;
+                case "TRIP": backColor = "Yellow";
+                    additionalinfoprint = "Stand still time: " + addtionalinfo + " minute(s)";
+                    break;
+                case "STANDSTILL": backColor = "Red";
+                    addtionalinfo = "";
+                    addressinfo = "";
+                    break;
+                default: backColor = "Cyan";
+
+                    break;
+            }
+            var isnum = /^\d+$/.test(event);        // For event that are integers (Jobs)
+            if (isnum) {
+                backColor = "DeepSkyBlue";
+                CheckOverTime(event, starttimevalue, endtimevalue, addtionalinfo);
+            }
+
+            var e = new DayPilot.Event({
+                start: starttimevalue,
+                end: endtimevalue,
+                id: DayPilot.guid(),
+                text: "<b>" + event + " " + starttimevalue + " - " + endtimevalue + "<br/><b>" + additionalinfoprint + "<br/><b>" + addressinfo,
+                backColor: backColor,
+
+            });
+
+            dp.events.add(e);
+            populateList(document.getElementById("hlistHR"),document.getElementById("hlist"), 0, 24);
+            //CheckOverTime(event, starttimevalue, endtimevalue, addtionalinfo);
+        }
+
+        dp.onTimeRangeSelected = function (args) {
+            SelectedStartTime = args.start;
+            SelectedEndTime = args.end;
+            if (CheckinTime <= SelectedStartTime) {
+                modal.style.display = "block";
+            }
+            else {
+                alert("Please select your event after check-in time");
+            }
+
+        };
+        dp.onEventMove = function (args) {
+            var str = args.e.text();
+            var startTime = args.e.start();
+            var endTime = args.e.end();
+            var newStart = args.newStart;
+            var newEnd = args.newEnd;
+
+            var eventname = str.substr(3, str.indexOf(' ') - 3);
+            alert(eventname);
+            if (startTime != newStart) {
+                if (eventname == "TRIP" || eventname == "STANDSTILL" || eventname == "START" || eventname == "FINISH" || /^\d+$/.test(eventname)) {
+                    args.preventDefault();
+                    alert("Can't move the " + eventname + " event");
+                }
+                else {
+
+
+                    UpdateEvent(EngineerName, CheckinDate, startTime, endTime, newStart, newEnd);
+
+                }
+            }
+
+
+        };
+
+        dp.onEventDelete = function (args) {
+            var str = args.e.text();
+            var startTime = args.e.start();
+            var endTime = args.e.end();
+
+            var eventname = str.substr(3, str.indexOf(' ') - 3);
+
+            if (eventname == "TRIP" || eventname == "STANDSTILL" || eventname == "START" || eventname == "FINISH" || /^\d+$/.test(eventname)) {
+                args.preventDefault();
+                alert("Can't delete the " + eventname + " event");
+            }
+            else {
+
+                DeleteEvent(EngineerName, CheckinDate, eventname, startTime, endTime)
+            }
+        };
+
+        //dp.onEventDeleted = function (args) {
+
+        //    // AJAX call to the server, this example uses jQuery
+        //    $.post("/event/delete/" + args.e.id(), function (result) {
+        //        dp.message("Event deleted: " + args.e.text());
+        //    });
+
+        //};
+
+
+        dp.onEventClicked = function (args) {
+            alert("clicked: " + args.e.text());
+        };
+        span.onclick = function () {
+            modal.style.display = "none";
+
+        }
+        span1.onclick = function () {
+
+            modalinner.style.display = "none";
+        }
+        function EventSelection() {
+            var Event = document.getElementById("EventList");
+            GlobalEvent = Event.options[Event.selectedIndex].text;
+
+
+            if (GlobalEvent == "TIME ADJUSTMENT - MISSING JOB") {
+                modalinner.style.display = "block";
+            }
+            else if (GlobalEvent == "WAITING FOR WORK" || GlobalEvent == "SICK") {
+                //alert("Please contact the office to create "+GlobalEvent+" event")
+
+                if ((new Date(SelectedEndTime) - new Date(localStorage.getItem("LastCheckinTime"))) / (60000) > 495) {
+                    alert("Please note you can not add "+GlobalEvent+" event beyond 8 hrs working time");
+                }
+                else
+                    AddAddtionalEvent();
+            }
+            else {
+                AddAddtionalEvent();
+            }
+            Event.selectedIndex = 0;
+            modal.style.display = "none";
+
+        }
+
+        function AddAddtionalEvent() {
+            var inpuLength = (document.getElementById('MoreInfo').value.length);
+            if(!/^[0-9]+$/.test(document.getElementById('MoreInfo').value) && GlobalEvent == "TIME ADJUSTMENT - MISSING JOB") {
+                    alert("Please enter valid information");
+            }
+            else {
+                    if (GlobalEvent == "TIME ADJUSTMENT - MISSING JOB") {
+                        GlobalEvent = GlobalEvent + " - " + document.getElementById('MoreInfo').value;
+            }
+
+
+
+
+                var starttime = SelectedStartTime;
+                var endtime = SelectedEndTime;
+                //if (GlobalEvent == "SICK") {
+                //     SelectedEndTime = starttime.toString().substring(0, 10) + "T17:00:00";
+                //}
+                var e = new DayPilot.Event({
+                    start: SelectedStartTime,
+                    end: SelectedEndTime,
+                    id: DayPilot.guid(),
+                    backColor: "Lime",
+                    text: GlobalEvent + "  " + SelectedStartTime + " - " + SelectedEndTime
+                });
+
+
+                var StarttimeSub = starttime.toString().substring(0, 10);
+                var EndtimeSub = endtime.toString().substring(0, 10);
+                if (StarttimeSub != EndtimeSub) {
+                    alert("Please sign out for " + StarttimeSub + " before adding an event for " + EndtimeSub);
+                    location.reload();
+                }
+                else {
+                    dp.events.add(e);
+                    AddEvent(EngineerName, CheckinDate, GlobalEvent, SelectedStartTime, SelectedEndTime, '', '');
+
+
+                }
+                //if (GlobalEvent == "SICK") {
+                //    AddCheckoutEvent(EngineerName, CheckinDate, GlobalEvent, SelectedEndTime, SelectedEndTime, '', '');
+                //}
+                document.getElementById('MoreInfo').value = "";
+                modalinner.style.display = "none";
+            }
+
+        }
+
+
+
+
+        function checkoutEvent() {
+
+            var refreshbtn = document.getElementById("refres");
+            var Checkoutbtn = document.getElementById("Checkout");
+
+			var StartTimeHR = document.getElementById("hlistHR");
+            var StartTimemin = document.getElementById("hlist");
+            var StartTimeValueHR = StartTimeHR.options[StartTimeHR.selectedIndex].text;
+            var StartTimeValuemin = StartTimemin.options[StartTimemin.selectedIndex].text;
+
+            var starttimeValue = StartTimeValueHR+":"+StartTimeValuemin;
+
+            var AppendDate = CheckinDate.substring(0, 10);
+            starttimeValue = AppendDate + "T" + starttimeValue + ":00";
+            checkbreakcount(new Date(starttimeValue));
+            if (window.localStorage.getItem("ConfirmBox") == 1) {
+                navigator.notification.confirm(
+               "Are you sure you want to check out at: " + starttimeValue + "?",
+                CheckoutCallback, // Specify a function to be called
+                'Check Out',
+                ["Cancel", "Ok"]
+            );
+            }
+            else {
+                CheckoutCallback(2);
+            }
+
+
+        }
+        function CheckoutCallback(b) {
+            if (b != 1) {
+                var refreshbtn = document.getElementById("refres");
+                var Checkoutbtn = document.getElementById("Checkout");
+
+				var StartTimeHR = document.getElementById("hlistHR");
+				var StartTimemin = document.getElementById("hlist");
+				var StartTimeValueHR = StartTimeHR.options[StartTimeHR.selectedIndex].text;
+            	var StartTimeValuemin = StartTimemin.options[StartTimemin.selectedIndex].text;
+
+                var starttimeValue = StartTimeValueHR+":"+StartTimeValuemin;
+
+                var AppendDate = CheckinDate.substring(0, 10);
+                starttimeValue = AppendDate + "T" + starttimeValue + ":00";
+                var breakcount = localStorage.getItem("BreakCountBeforeCheckout");
+                if (breakcount < 1) {
+                    //alert(breakcount);
+                    AddCheckoutEvent(EngineerName, CheckinDate, GlobalEvent, starttimeValue, starttimeValue, '', '');
+                    starttime.style.visibility = "hidden";
+                    refreshbtn.disabled = true;
+                    Checkoutbtn.disabled = true;
+
+                }
+
+
+                    // Load the data back to the remote DB
+                    //StartLoad(EngineerName, CheckinDate, 1);
+                else {
+                    alert(breakcount + " break(s) greater than 5 minutes. Please complete it with tasks");
+                    Reload();
+
+                }
+            }
+            else {
+                Reload();
+            }
+
+
+        }
+
+
+        function Checkout() {
+            var message = document.getElementById("CheckoutMessage");
+            message.style.visibility = "visible";
+            var NetworkStatus = 1;
+            if (NetworkStatus == 1) {
+                //var breakcount = checkbreakcount();
+                // If there is 1 or more break greater than 15 minutes it wouldn't let the users checkout until the gaps are filled
+                window.localStorage.setItem("BreakCountBeforeCheckout", 0);
+                    GetJobDetails(EngineerName, CheckinDate);
+                    GetLastStandStill(EngineerName, CheckinDate);
+                    GlobalEvent = "FINISH WORK";
+                    document.getElementById("Checkout").disabled = true;
+                    //var breakcount = checkbreakcount();
+                    var DropDown = document.getElementById("hlist");
+                    DropDown.style.visibility = "visible";
+                    DropDown.style.display = "block";
+
+                    var DropDownHR = document.getElementById("hlistHR");
+					DropDownHR.style.visibility = "visible";
+                    DropDownHR.style.display = "block";
+
+                    GetMaxTime(EngineerName, CheckinDate)
+
+
+
+            }
+            else {
+                navigator.notification.alert('You need a data connection to perform this task', {}, 'Sync Fail', 'Ok');
+            }
+        }
+        function checkbreakcount(checkoutTime) {
+            CalculateBreakCount(EngineerName, checkoutTime);
+        }
+        function CheckOverTime(event, starttimevalue, endtimevalue, addtionalinfo) { // Events extending beyond midnight
+            var starttime = starttimevalue;
+            var endtime = endtimevalue;
+            if (starttime.toString().substring(0, 10) != endtime.toString().substring(0, 10)) { // Split the event from start time to 23:59 and 00:00 to endtime and add a checkout for the start date and checkin for end date
+                //DeleteRecord(EngineerName, CheckinDate, event, starttimevalue);
+                AddEvent(EngineerName, CheckinDate, event, starttimevalue, starttime.toString().substring(0, 10) + "T23:59:00", addtionalinfo, ''); //
+                window.localStorage.setItem("maxEndTime", starttime.toString().substring(0, 10) + "T23:59:00");
+                AddCheckoutEvent(EngineerName, CheckinDate, "FINISH WORK", starttime.toString().substring(0, 10) + "T23:59:00", starttime.toString().substring(0, 10) + "T23:59:00", '', '');
+                //alert("Adding the new records");
+                window.localStorage.setItem("LastCheckinDate", endtime.toString().substring(0, 10) + "T00:00:00"); // Change the last check in date
+                window.localStorage.setItem("LastCheckinTime", endtime.toString().substring(0, 10) + "T00:00:00"); // change the last check in time
+                AddEvent(EngineerName, endtime.toString().substring(0, 10) + "T00:00:00", "START WORK", endtime.toString().substring(0, 10) + "T00:00:00", endtime.toString().substring(0, 10) + "T00:00:00", '', '');
+                AddEvent(EngineerName, endtime.toString().substring(0, 10) + "T00:00:00", event, (endtime.toString().substring(0, 10) + "T00:00:00"), endtimevalue, addtionalinfo, '');
+                StartLoad(EngineerName, starttime.toString().substring(0, 10) + "T00:00:00", 0);  // Load the data back to the remote DB for the day as there was a checkout event
+
+
+
+            }
+        }
+
+    </script>
+    <script>
+
+        function populateList(hrList, aList, aStartHour, aEndHour) { // Populate the Time Dropdown
+            var itemIndex = 0;
+            var hrIndex = 0;
+            // firstly empty the list if it's got anthing in it.
+            while (aList.options.length > 0) {
+                aList.options.remove(0);
+            }
+
+            while (hrList.options.length > 0) {
+			    hrList.options.remove(0);
+            }
+            // now add the new items;
+            var opt1 = document.createElement("OPTION");
+            aList.options.add(opt1);
+            opt1.value = "time" + itemIndex;
+            opt1.innerText = "";
+            ++itemIndex;
+
+            for (var h = aStartHour; (h < aEndHour) ; ++h) {
+                var hs = ((h < 10) ? "0" : "") + h;
+                var opthr = document.createElement("OPTION");
+                hrList.options.add(opthr);
+				opthr.value = "time" + hrIndex;
+				opthr.innerText = hs;
+                ++hrIndex;
+           }
+
+                // do the fifteen minute thing
+                for (var m = 0; (m < 60) ; m += parseInt(localStorage.getItem("LogonMinutes"), 10)) {
+                    var opt = document.createElement("OPTION");
+                    var ms = ((m < 10) ? "0" : "") + m;
+                    aList.options.add(opt);
+                    opt.value = "time" + itemIndex;
+                    opt.innerText =  ms;
+                    ++itemIndex;
+                }
+
+            return;
+        }
+
+        function ValidatestartTime(EventStartTime) {
+            var Checkindate = new DayPilot.Date(CheckinDate + "T" + CheckinTime);
+            if (Checkindate < EventStartTime) {
+                return 1;
+            }
+            else
+                return 0;
+
+        }
+        function GetTodayDate(DatetimeValue) {
+
+            var dd = DatetimeValue.getDate();
+            var mm = DatetimeValue.getMonth() + 1; //January is 0!
+            var yyyy = DatetimeValue.getFullYear();
+
+            if (dd < 10) {
+                dd = "0" + dd;
+
+            }
+
+            if (mm < 10) {
+                mm = "0" + mm;
+
+            }
+
+            var todaydate = yyyy + "-" + mm + "-" + dd + "T00:00:00";
+
+            return todaydate;
+        }
+        var getDateArray = function (start, end) {
+            var arr = new Array();
+            var dt = new Date(start);
+
+            while (dt < end && dt.getDay() % 6 != 0) {
+                arr.push(dt.toString().substr(0,16));
+                dt.setDate(dt.getDate() + 1);
+            }
+            return arr;
+        }
+    </script>
+<script>
+
+</script>
+
+</body>
+
+</html>

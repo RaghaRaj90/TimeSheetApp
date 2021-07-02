@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>About</title>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no;" />
+    <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="Content/bootstrap.css">
+    <script type="text/javascript" src="js/SyncDB.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/index.js"></script>
+    <script>
+
+    function TestData() {
+        var networkState = navigator.connection.type;
+        var states = {};
+        states[Connection.UNKNOWN] = 'Unknown connection';
+        states[Connection.ETHERNET] = 'Ethernet connection';
+        states[Connection.WIFI] = 'WiFi connection';
+        states[Connection.CELL_2G] = 'Cell 2G connection';
+        states[Connection.CELL_3G] = 'Cell 3G connection';
+        states[Connection.CELL_4G] = 'Cell 4G connection';
+        states[Connection.CELL] = 'Cell generic connection';
+        states[Connection.NONE] = 'No network connection';
+
+        if (states[networkState] != "No network connection" && states[networkState] != "Unknown connection") {
+            alert('Connection type: ' + states[networkState]);
+
+        }
+        else {
+            //alert("You need a data connection to perform sync");
+            //navigator.notification.alert('You need a data connection to perform sync', {}, 'Sync Fail', 'Ok');
+            alert("No Data connection");
+        }
+
+    }
+    </script>
+</head>
+<body >
+    <br />
+    <div class="container body-content" style="font-family: Arial;">
+        <header>
+            <img src="img/logo.png" style="width:60%;height:9.30%" />
+            <br />
+            <br />
+        </header>
+        <br/>
+        <section style="border:1px solid black">
+            <h3> Welcome to the AGGORA Technical timesheet management app &ndash; a handy way to manage your timesheet on the go! </h3>
+            <br />
+
+            The Employee Timesheet app is an alternative to sign in sheets and was developed with both employees and human resources professionals in mind. It is a daily timesheet that helps both parties keep track of time and attendance. It records all types of employee hours including Jobs, travel, lunch and other misc tasks.
+
+            This app aims to minimize the time spent by engineers for doing their timesheets. Employees are expected to checkin at the beginnning of each day and checkout at the end of each working day. Timesheet automatically retreives all the job and travel related information with a simple push of <img src="img/sign-sync-icon.png" /> button.
+            It is ever so easy to add the time spent on other activities during the working hours such as lunch, parts collection, etc by simply dragging the time slots on the calendar.
+
+            It's easy to record and send timesheets so engineers are less likely to forget to enter billable hours for jobs that are away from the office. With a few clicks the timesheets will be sent back to the office leading to faster billing.
+
+        </section>
+        <br /><br />
+        <section >
+            <h2> Diagnostic section </h2>
+            <br />
+            <div class="row">
+                <input type="button" id="refres" value="Test Data Connection" class="col-xs-4"  style="height:40px; width:30%;margin-right:2%;" onclick="TestData();">
+                <input type="button" id="refres" value="Test Remote Connection" class="col-xs-4" style="height:40px;width:30%;margin-right:2%" onclick="TestPing();">
+                <input type="button" id="refres" value="Send Report" class="col-xs-4" style="height:40px;width:30%" onclick="javascript: backupContent(localStorage.getItem('EngineerName'), localStorage.getItem('LastCheckinDate'));"><br />
+                </div>
+        </section>
+</div>
+    <div id="footer">
+
+        <a href="javascript:window.history.back()" class=" footerelem"><img src="img/BackButton.png" /></a>
+        <a href="javascript:window.location.href = 'Chat.html'" class="footerelem"><img src="img/FAQ-icon.png" /></a>
+        <a class="footerelem" href="tel://+44 0845 1177 999"><img src="img/04-Call-icon.png" /></a>
+        <a class="footerelem" href="javascript:Logout()"><img src="img/Lock-2-icon.png" /></a>
+
+    </div>
+</body>
+</html>

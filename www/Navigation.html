@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Checkin</title>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no;" />
+    <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <link rel="stylesheet" href="css/jquery-ui.css">
+    <link rel="stylesheet" type="text/css" href="Content/bootstrap.css">
+    <script type="text/javascript" src="js/SyncDB.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/index.js"></script>
+    <style>
+    table, td, th {
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    th, td {
+      padding: 5px;
+    }
+</style>
+    <script>
+
+        function Logout() {
+            navigator.notification.confirm(
+               "Are you sure you want to logout?",
+                callBackFunction, // Specify a function to be called
+                'Logout',
+                ["Cancel", "Ok"]
+        );
+        }
+        function callBackFunction(b) {
+            if (b != 1) {
+                window.localStorage.removeItem("username");
+                window.localStorage.removeItem("password");
+                window.location.href = 'index.html';
+            }
+        }
+    </script>
+    <script>
+        function SyncData() {
+            var networkState = navigator.connection.type;
+            var states = {};
+            states[Connection.UNKNOWN] = 'Unknown connection';
+            states[Connection.ETHERNET] = 'Ethernet connection';
+            states[Connection.WIFI] = 'WiFi connection';
+            states[Connection.CELL_2G] = 'Cell 2G connection';
+            states[Connection.CELL_3G] = 'Cell 3G connection';
+            states[Connection.CELL_4G] = 'Cell 4G connection';
+            states[Connection.CELL] = 'Cell generic connection';
+            states[Connection.NONE] = 'No network connection';
+            //alert('Connection type: ' + states[networkState]);
+            if (states[networkState] != "No network connection" && states[networkState] != "Unknown connection") {
+                GetExistingData();
+                //alert("Sync Done...");
+                navigator.notification.alert('Sync Done...', {}, 'Sync', 'Ok');
+            }
+            else {
+                //alert("You need a data connection to perform sync");
+                navigator.notification.alert('You need a data connection to perform sync', {}, 'Sync Fail', 'Ok');
+            }
+        }
+    </script>
+    <script>
+        //$(function () {
+        //    $("#datepicker").datepicker({
+        //        dateFormat: 'yy-mm-dd',
+
+        //    });
+        //});
+        function onLoad() {
+            startup();
+            GetControls();
+            LastCheckin(localStorage.getItem("EngineerName"));
+            TestPing();
+            var todaydate = GetTodayDate();
+            var today = new Date(localStorage.getItem("MaxCheckinDate"));
+            var dd = today.getDate();
+            var mm = today.getMonth() + 1; //January is 0!
+            var yyyy = today.getFullYear();
+
+            if (dd < 10) {
+                dd = "0" + dd;
+
+            }
+
+            if (mm < 10) {
+                mm = "0" + mm;
+
+            }
+
+
+            var dd_Today = new Date(todaydate).getDate();
+            var mm_Today = new Date(todaydate).getMonth() + 1; //January is 0!
+            var yyyy_Today = new Date(todaydate).getFullYear();
+
+            if (dd_Today < 10) {
+                dd_Today = "0" + dd_Today;
+
+            }
+
+            if (mm_Today < 10) {
+                mm_Today = "0" + mm_Today;
+
+            }
+            var checkindate = yyyy + "-" + mm + "-" + dd;
+            var todaydate_format = yyyy_Today +"-"+mm_Today+"-"+dd_Today;
+
+
+
+
+
+             if(localStorage.getItem("CalendarFlag")  ==0){ // Defaults to last check-in date
+             	$("#datepicker").datepicker({
+				     dateFormat: 'yy-mm-dd',
+				     minDate: new Date(yyyy, mm - 1, dd),
+				     maxDate: new Date(yyyy, mm - 1, dd)
+                });
+             }
+
+             else if(localStorage.getItem("CalendarFlag")  == 1){ //Defaults to today's date
+             	$("#datepicker").datepicker({
+				    dateFormat: 'yy-mm-dd',
+                    minDate: new Date(yyyy_Today, mm_Today - 1, dd_Today),
+                    maxDate: new Date(yyyy_Today, mm_Today - 1, dd_Today)
+                });
+             }
+
+             else if(localStorage.getItem("CalendarFlag")  == 2){ // Defaults to existing process - Last check-in to today's date
+			     $("#datepicker").datepicker({
+			 		 dateFormat: 'yy-mm-dd',
+			         minDate: new Date(yyyy, mm - 1, dd),
+			         maxDate: new Date(yyyy_Today, mm_Today - 1, dd_Today)
+			     });
+             }
+            //document.getElementById("datepicker").setAttribute("min", todaydate); // if not set it to today's date
+
+            //$("#datepicker").datepicker({
+            //    dateFormat: 'yy-mm-dd',
+            //    maxDate: new Date(yyyy_Today, mm_Today - 1, dd_Today),
+            //});
+            //document.getElementById("datepicker").setAttribute("max", todaydate); // mas date is always today's date
+            //$("#datepicker").datepicker({
+            //    dateFormat: 'yy-mm-dd',
+
+            //});
+            populateList(document.getElementById("hlistHR"),document.getElementById("hlist"), 0, 24);
+            //var todaydate = GetTodayDate();
+            ////var Datadiv = document.getElementById("date");
+            ////Datadiv.innerHTML = "Please check-in for : " + localStorage.getItem("LastCheckinDate") + " <img src='img/next1.png' />";
+            ////Datadiv.innerHTML = "Please check-in for : " + checkindate;
+            //var today = new Date(localStorage.getItem("MaxCheckinDate"));
+            //var dd = today.getDate();
+            //var mm = today.getMonth() + 1; //January is 0!
+            //var yyyy = today.getFullYear();
+
+            //if (dd < 10) {
+            //    dd = "0" + dd;
+
+            //}
+
+            //if (mm < 10) {
+            //    mm = "0" + mm;
+
+            //}
+            //var checkindate = yyyy + "-" + mm + "-" + dd;
+
+
+            //document.getElementById("datepicker").setAttribute("min", checkindate);
+            //document.getElementById("datepicker").setAttribute("max", todaydate);
+            //GetAnnouncements(localStorage.getItem("EngineerName"), todaydate_format);
+            return;
+        }
+        function populateList(hrList, aList, aStartHour, aEndHour) { // Populate the Time Dropdown
+            var itemIndex = 0;
+            var hrIndex = 0;
+            // firstly empty the list if it's got anthing in it.
+            while (aList.options.length > 0) {
+                aList.options.remove(0);
+            }
+
+            while (hrList.options.length > 0) {
+			    hrList.options.remove(0);
+            }
+            // now add the new items;
+            var opt1 = document.createElement("OPTION");
+            aList.options.add(opt1);
+            opt1.value = "time" + itemIndex;
+            opt1.innerText = "";
+            ++itemIndex;
+
+            for (var h = aStartHour; (h < aEndHour) ; ++h) {
+                var hs = ((h < 10) ? "0" : "") + h;
+                var opthr = document.createElement("OPTION");
+                hrList.options.add(opthr);
+				opthr.value = "time" + hrIndex;
+				opthr.innerText = hs;
+                ++hrIndex;
+           }
+
+                // do the fifteen minute thing
+                for (var m = 0; (m < 60) ; m += parseInt(localStorage.getItem("LogonMinutes"), 10)) {
+                    var opt = document.createElement("OPTION");
+                    var ms = ((m < 10) ? "0" : "") + m;
+                    aList.options.add(opt);
+                    opt.value = "time" + itemIndex;
+                    opt.innerText =  ms;
+                    ++itemIndex;
+                }
+
+            return;
+        }
+
+    </script>
+
+
+
+</head>
+<body onload="onLoad();" style ="overflow:scroll;">
+    <br />
+    <div class="container body-content" style="font-family: Arial; ">
+        <header>
+            <img src="img/logo.png" style="width:60%;height:9.30%" />
+            <br />
+            <br />
+        </header>
+
+        <div>
+            <h3> Welcome to the AGGORA timesheet app &ndash; a handy way to manage your timesheet on the go! </h3>
+        </div>
+        <!--
+                <div id="metric_results">
+                     <section >
+                            <h2> Announcement Section </h3>
+
+                            <table id="records_table" border='1' >
+                                <tr>
+                                    <th>Engineer Name</th>
+                                    <th>Announcement</th>
+                                    <th>Announcement date</th>
+                                    <th>Announcement made by</th>
+                                    <th>Mark as Done</th>
+                                </tr>
+                            </table>
+
+                    </section>
+                </div>
+
+        //-->
+
+        <div id="date">
+        <h2> Checkin Section </h3>
+            Please checkin for: <input type="text" id="datepicker" onchange="DateSelection();" style="visibility:hidden" placeholder="Select Date">
+        </div> <br/>
+
+        <div class="logindiv" id="mainbody" style="visibility:hidden; left:10%; ">
+            <button onclick="makevisible()" style="height:30%;width:40%"><input type="image" src="img/Clock2.png" style="height:25%;width:60%" /></button>
+            <button onclick="SickDay()" style="float:right;height:30%;width:40%"><input type="image" src="img/Sickness2.png" style="height:25%; width:60% " /></button>
+            <br/>
+            <select id="hlistHR" style="display:none; width:50px" ></select>
+            <select id="hlist" style="display:none; width:50px" onchange="CreateEvent()"></select>
+        </div>
+    </div>
+
+
+    <div id="footer">
+
+        <a href="" class="footerelem"><img src="img/sign-sync-icon.png" /></a>
+        <a href="javascript:window.location.href = 'About.html'" class="footerelem"><img src="img/FAQ-icon.png" /></a>
+        <a class="footerelem" href="tel://+44 0845 1177 999"><img src="img/04-Call-icon.png" /></a>
+        <a class="footerelem" href="javascript:Logout()"><img src="img/Lock-2-icon.png" /></a>
+
+    </div>
+
+    <script>
+        function makevisible() {
+            var checkin = document.getElementById("checkin");
+            var DropDown = document.getElementById("hlist");
+            var DropDownHR = document.getElementById("hlistHR");
+            DropDown.style.visibility = "visible";
+            DropDown.style.display = "block";
+
+            DropDownHR.style.visibility = "visible";
+            DropDownHR.style.display = "block";
+
+            return;
+        }
+    </script>
+    <script>
+        function GetTodayDate() { // get today's date in yyyy-mm-dd format
+            var today = new Date();
+            var dd = today.getDate();
+            var mm = today.getMonth() +1; //January is 0!
+            var yyyy = today.getFullYear();
+
+            if (dd < 10) {
+                dd = "0" + dd;
+
+            }
+
+            if (mm < 10) {
+                mm = "0" + mm;
+
+            }
+            var todaydate = yyyy + "-" + mm + "-" + dd;
+            return todaydate;
+        }
+        function CreateEvent() {  // Create the check in event for today
+            //  navigator.notification.confirm(
+            //       "Are you Oncall today?",
+            //        callBackFunction, // Specify a function to be called
+            //        'Oncall',
+            //        ["No", "Yes"]
+            //);
+			var StartTimeHR = document.getElementById("hlistHR");
+            var StartTimemin = document.getElementById("hlist");
+            var StartTimeValueHR = StartTimeHR.options[StartTimeHR.selectedIndex].text;
+            var StartTimeValuemin = StartTimemin.options[StartTimemin.selectedIndex].text;
+
+            var StartTimeValue = StartTimeValueHR+":"+StartTimeValuemin;
+
+            if( window.localStorage.getItem("ConfirmBox")==1){
+                navigator.notification.confirm(
+               "Are you sure you want to check in at: " + StartTimeValue + "?",
+                CheckinCallback, // Specify a function to be called
+                'Start Day',
+                ["Cancel", "Ok"]
+            );
+
+            }
+
+            else{
+                CheckinCallback(2);
+            }
+
+        }
+
+        //function CreateEvent() {
+        //    //if (b != 1) {
+        //        var CurrentDate = GetTodayDate();
+        //        var CurrentDateTime = CurrentDate + "T00:00:00";
+        //        var EngineerName = localStorage.getItem("EngineerName");
+        //        var StartTime = document.getElementById("hlist");
+        //        var StartTimeValue = StartTime.options[StartTime.selectedIndex].text;
+        //        var EndTime = GetCheckinEndTime(StartTimeValue);
+        //        var StartTimeValue = CurrentDate + "T" + StartTimeValue + ":00";
+        //        var EndTimeValue = CurrentDate + "T" + EndTime + ":00";
+        //        AddEvent(EngineerName, CurrentDateTime, "START WORK", StartTimeValue, EndTimeValue, '', '');
+        //        window.localStorage.setItem("LastCheckinDate", CurrentDateTime);
+        //        window.localStorage.setItem("LastCheckinTime", EndTimeValue);
+
+        //        //GetJobDetails(EngineerName, CurrentDateTime);
+        //        window.location.href = 'TimeSheet.html';
+        //    //}
+        //}
+
+        function CheckinCallback(b) {
+            if (b != 1) {
+                var CurrentDate;
+                //var lastcheckindate = localStorage.getItem("LastCheckinDate").toString().substring(0, 10);
+                //var TodayDate = GetTodayDate();
+                //if (new Date(lastcheckindate) < new Date(TodayDate))
+                //    CurrentDate = lastcheckindate;
+                //else
+                //    CurrentDate = TodayDate;
+                CurrentDate = document.getElementById("datepicker").value
+                var CurrentDateTime = CurrentDate + "T00:00:00";
+                var EngineerName = localStorage.getItem("EngineerName");
+				var StartTimeHR = document.getElementById("hlistHR");
+            	var StartTimemin = document.getElementById("hlist");
+            	var StartTimeValueHR = StartTimeHR.options[StartTimeHR.selectedIndex].text;
+            	var StartTimeValuemin = StartTimemin.options[StartTimemin.selectedIndex].text;
+
+            	var StartTimeValue = StartTimeValueHR+":"+StartTimeValuemin;
+
+                StartTimeValue = CurrentDate + "T" + StartTimeValue + ":00";
+
+
+				AddEvent(EngineerName, CurrentDateTime, "START WORK", StartTimeValue, StartTimeValue, '', '');
+                window.localStorage.setItem("LastCheckinDate", CurrentDateTime);
+                window.localStorage.setItem("LastCheckinTime", EndTimeValue);
+
+                ////GetJobDetails(EngineerName, CurrentDateTime);
+                //window.location.href = 'TimeSheet.html';
+            }
+        }
+
+        function GetCheckinEndTime(startTimeSelected) { // Get the added 15 minutes for Check in end time -- Not used anymore since the check-in process change to 1 minute
+            var hourValue = startTimeSelected.toString().substring(0, 2);
+            var minuteValue = startTimeSelected.toString().substring(3, 5);
+            switch (minuteValue) {
+                case "00": minuteValue = "15";
+                    break;
+                case "15": minuteValue = "30";
+                    break;
+                case "30": minuteValue = "45";
+                    break;
+                case "45": minuteValue = "00";
+                    hourValue = parseInt(hourValue) + 1;
+                    if (hourValue < 10)
+                        hourValue = "0" + hourValue;
+                    break;
+            }
+
+            return hourValue + ":" + minuteValue;
+        }
+
+
+
+
+    </script>
+    <script>
+        function DateSelection() {
+            window.localStorage.setItem("LastCheckinDate", document.getElementById("datepicker").value + "T00:00:00");
+            var mainbody = document.getElementById("mainbody");
+            mainbody.style.visibility = "visible";
+        }
+        function SickDay() {
+
+            if (window.localStorage.getItem("ConfirmBox") == 1) {
+                navigator.notification.confirm(
+               "Are you sure you want to mark " + localStorage.getItem("LastCheckinDate") + " as sick day?",
+                SickCallback, // Specify a function to be called
+                'Sick Day',
+                ["Cancel", "Ok"]
+            );
+
+            }
+
+            else {
+                SickCallback(2);
+            }
+        }
+
+        function SickCallback(b) {
+            if (b != 1) {
+                alert("Please inform your regional manager over the phone");
+                AddCheckoutEvent(localStorage.getItem("EngineerName"), localStorage.getItem("LastCheckinDate"), "SICK", document.getElementById("datepicker").value + "T08:30:00", document.getElementById("datepicker").value + "T17:00:00", '', '');
+                //location.reload();
+
+            }
+
+
+        }
+
+
+    </script>
+
+</body>
+</html>

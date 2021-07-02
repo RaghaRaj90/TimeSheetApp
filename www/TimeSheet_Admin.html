@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Timesheet</title>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no;" />
+    <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="js/ocrad.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="Content/bootstrap.css">
+    <script type="text/javascript" src="js/SyncDB.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/index.js"></script>
+    <script src="js/daypilot-all.min_RR.js" type="text/javascript"></script>
+
+    <script>
+
+        function Logout() {
+            navigator.notification.confirm(
+               "Are you sure you want to logout?",
+                callBackFunction, // Specify a function to be called
+                'Logout',
+                ["Cancel", "Ok"]
+        );
+        }
+        function callBackFunction(b) {
+            if (b != 1) {
+                window.localStorage.removeItem("username");
+                window.localStorage.removeItem("password");
+
+                window.location.href = 'index.html';
+            }
+        }
+        function SyncData() {
+
+            GetJobDetails(localStorage.getItem("EngineerName"), localStorage.getItem("LastCheckinDate"));
+            //PopulateEvent();
+            var loading = document.getElementById("loading");
+            loading.style.visibility = "visible";
+            var delayMillis = 3000; //3 seconds delay
+
+            setTimeout(function () {
+                loading.style.visibility = "hidden";
+                onLoad();
+            }, delayMillis);
+
+        }
+        function Reload() {
+            location.reload();
+        }
+    </script>
+
+    <script>
+        function SyncData1() {
+            var networkState = navigator.connection.type;
+            var states = {};
+            states[Connection.UNKNOWN] = 'Unknown connection';
+            states[Connection.ETHERNET] = 'Ethernet connection';
+            states[Connection.WIFI] = 'WiFi connection';
+            states[Connection.CELL_2G] = 'Cell 2G connection';
+            states[Connection.CELL_3G] = 'Cell 3G connection';
+            states[Connection.CELL_4G] = 'Cell 4G connection';
+            states[Connection.CELL] = 'Cell generic connection';
+            states[Connection.NONE] = 'No network connection';
+            //alert('Connection type: ' + states[networkState]);
+            if (states[networkState] != "No network connection" && states[networkState] != "Unknown connection") {
+                //GetJobDetails(localStorage.getItem("EngineerName"), localStorage.getItem("LastCheckinDate"));
+                //PopulateEvent();
+                //alert("Sync Done...");
+                //navigator.notification.alert('Sync Done...', {}, 'Sync', 'Ok');
+                return 1;
+            }
+            else {
+                //alert("You need a data connection to perform sync");
+                //navigator.notification.alert('You need a data connection to perform sync', {}, 'Sync Fail', 'Ok');
+                return 0;
+            }
+        }
+    </script>
+    <script>
+
+        function onLoad() {
+            document.getElementById("EngineerName").innerHTML = localStorage.getItem("EngineerName");
+            document.getElementById("Date").innerHTML = localStorage.getItem("LastCheckinDate");
+            //GetJobDetails(localStorage.getItem("EngineerName"), localStorage.getItem("LastCheckinDate")); // function call to retrieve data from the server
+
+            //console.log("Value: "+localStorage.getItem("hasCodeRunBefore"));
+            //if (localStorage.getItem("hasCodeRunBefore") === null) {
+            //  SyncData();
+            //    localStorage.setItem("hasCodeRunBefore", "TRUE")
+            //    Reload();
+            //}
+            PopulateEvent();
+
+        }
+    </script>
+</head>
+<body onload="SyncData();">
+    <br />
+    <div class="container body-content" style="font-family: Arial;">
+        <header>
+            <img src="img/logo.png" style="width:60%;height:9.30%" />
+            <br />
+            <br />
+        </header>
+
+
+        <b>Engineer Name: </b> <div id="EngineerName"> </div>
+        <b>Date: </b><div id="Date"></div>
+        <br />
+        <div class="row">
+            <input type="submit" id="Checkout" value="Check out" style="height:40px;width:45%" class="col-xs-6" onclick="Checkout()" disabled>
+
+            <input type="button" id="refres" value="Refresh Page" style="height:40px;width:45%;float:right" class="col-xs-6" onclick="Reload();"> <br />
+        </div>
+        <select id="hlist1" style="display:none"></select><select id="hlist" style="display:none" onchange="PopulateEventDetails();"></select>
+
+        <br /> <br />
+        <div id="myModal" class="modal" style="top:50%; left:30%; width:20%; height:100px">
+
+            <!-- Modal content -->
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <p>
+                    Please Select the Event:
+                    <select id="EventList" onchange="EventSelection()">
+                        <option selected="selected"></option>
+                        <option value="Lunch">LUNCH</option>
+                        <option value="PartCollection">PARTS/BIG YELLOW STORAGE</option>
+                        <option value="Office">OFFICE/ADMIN</option>
+                        <option value="SourcingParts">PARTS/SOURCING/WHOLESALER</option>
+                        <option value="Training">TRAINING</option>
+                        <option value="WaitingForWork">WAITING FOR WORK</option>
+                        <option value="RestTime">REST TIME</option>
+                        <option value="VehicleService">VEHICLE SERVICE</option>
+                    </select>
+                </p>
+            </div>
+        </div>
+        <img id="loading" src="img/loading.gif" style="visibility:hidden;" />
+        <div id="dp" style="visibility:hidden">
+
+        </div>
+
+
+    </div>
+
+
+
+
+    <div id="footer">
+
+        <a href="javascript:SyncData() " class="footerelem"><img src="img/sign-sync-icon.png" /></a>
+        <a href="javascript:window.history.back()" class=" footerelem"><img src="img/BackButton.png" /></a>
+        <a class="footerelem" href="tel://+44 0845 1177 999"><img src="img/04-Call-icon.png" /></a>
+        <a class="footerelem" href="javascript:Logout()"><img src="img/Lock-2-icon.png" /></a>
+
+    </div>
+
+    <script type="text/javascript">
+
+        var dp = new DayPilot.Calendar("dp");   // Day pilot calendar
+        dp.startDate = localStorage.getItem("LastCheckinDate");
+        dp.dayBeginsHour = 1;
+        dp.dayEndsHour = 1;
+        dp.cellHeight = 35;
+        dp.cellDuration = 15;
+        dp.hourHalfBorderColor = "Red";
+        dp.useEventBoxes = "Never";
+        dp.autoRefreshInterval = 10;
+        dp.autoRefreshMaxCount = 10;
+        dp.autoRefreshEnabled = true;
+        //dp.moveBy = "None";
+        dp.init();
+        var GlobalEvent;
+        var EngineerName = localStorage.getItem("EngineerName");
+        var CheckinDate = localStorage.getItem("LastCheckinDate");
+        var CheckinTime = localStorage.getItem("LastCheckinTime");
+        var modal = document.getElementById('myModal');
+        var span = document.getElementsByClassName("close")[0];
+        var SelectedStartTime;
+        var SelectedEndTime;
+
+        function PopulateEvent() {
+            GetDayEvent(EngineerName, CheckinDate);
+            document.getElementById("Checkout").disabled = false;
+
+        }
+
+        function CreateEvent(event, starttimevalue, endtimevalue, addtionalinfo, addressinfo) {  // create the events and populate the calendar
+            event = event.trim()
+            switch (event) {
+                case "START WORK": backColor = "LawnGreen";
+                    break;
+                case "TRIP": backColor = "Yellow";
+                    addtionalinfo = "Stand still time: " + addtionalinfo + " minute(s)";
+                    break;
+                case "STANDSTILL": backColor = "Red";
+                    break;
+                default: backColor = "Cyan";
+                    break;
+            }
+            var isnum = /^\d+$/.test(event);        // For event that are integers (Jobs)
+            if (isnum)
+                backColor = "DeepSkyBlue";
+            CheckOverTime(event, starttimevalue, endtimevalue, addtionalinfo);
+            var e = new DayPilot.Event({
+                start: starttimevalue,
+                end: endtimevalue,
+                id: DayPilot.guid(),
+                text: "<b>" + event + " " + starttimevalue + " - " + endtimevalue + "<br/><b>" + addtionalinfo + "<br/><b>" + addressinfo,
+                backColor: backColor,
+
+            });
+
+            dp.events.add(e);
+            populateList(document.getElementById("hlist"), endtimevalue.substring(12, 13), 24);
+            CheckOverTime(event, starttimevalue, endtimevalue, addtionalinfo);
+        }
+
+        dp.onTimeRangeSelected = function (args) {
+            SelectedStartTime = args.start;
+            SelectedEndTime = args.end;
+            if (CheckinTime <= SelectedStartTime) {
+                modal.style.display = "block";
+            }
+            else {
+                alert("Please select your event after check in time");
+            }
+
+        };
+        dp.onEventMove = function (args) {
+            var str = args.e.text();
+            var startTime = args.e.start();
+            var endTime = args.e.end();
+
+            var eventname = str.substr(3, str.indexOf(' ') - 3);
+            alert(eventname)
+            if (eventname == "TRIP" || eventname == "STANDSTILL" || eventname == "START" || eventname == "FINISH" || /^\d+$/.test(eventname)) {
+                args.preventDefault();
+                alert("Can't move the " + eventname + " event");
+            }
+            else {
+                var newStart = args.newStart;
+                var newEnd = args.newEnd;
+
+                UpdateEvent(EngineerName, CheckinDate, startTime, endTime, newStart, newEnd);
+
+            }
+
+        };
+        dp.onEventClicked = function (args) {
+            alert("clicked: " + args.e.text());
+        };
+        span.onclick = function () {
+            modal.style.display = "none";
+        }
+
+        function EventSelection() {
+            var Event = document.getElementById("EventList")
+            var GlobalEvent = Event.options[Event.selectedIndex].text;
+            var starttime = SelectedStartTime;
+            var endtime = SelectedEndTime;
+            var e = new DayPilot.Event({
+                start: SelectedStartTime,
+                end: SelectedEndTime,
+                id: DayPilot.guid(),
+                backColor: "Lime",
+                text: GlobalEvent + "  " + SelectedStartTime + " - " + SelectedEndTime
+            });
+
+            dp.events.add(e);
+            if (starttime.toString().substring(0, 10) != endtime.toString().substring(0, 10)) { // Events extending beyond midnight
+                AddEvent(EngineerName, CheckinDate, GlobalEvent, SelectedStartTime, starttime.toString().substring(0, 10) + "T23:59:00", '', '');
+                AddEvent(EngineerName, CheckinDate, "FINISH WORK", starttime.toString().substring(0, 10) + "T23:59:00", starttime.toString().substring(0, 10) + "T23:59:00", '', '');
+
+                alert("Adding the new records");
+                window.localStorage.setItem("LastCheckinDate", endtime.toString().substring(0, 10) + "T00:00:00");
+                window.localStorage.setItem("LastCheckinTime", endtime.toString().substring(0, 10) + "T00:00:00");
+                AddEvent(EngineerName, endtime.toString().substring(0, 10) + "T00:00:00", "START WORK", endtime.toString().substring(0, 10) + "T00:00:00", endtime.toString().substring(0, 10) + "T00:00:00", '', '');
+                AddEvent(EngineerName, endtime.toString().substring(0, 10) + "T00:00:00", GlobalEvent, (endtime.toString().substring(0, 10) + "T00:00:00"), SelectedEndTime, '', '');
+                StartLoad(EngineerName, starttime.toString().substring(0, 10) + "T00:00:00", 0);
+                location.reload();
+
+
+            }
+            else {
+                AddEvent(EngineerName, CheckinDate, GlobalEvent, SelectedStartTime, SelectedEndTime, '', '');
+            }
+            Event.selectedIndex = 0;
+            modal.style.display = "none";
+        }
+
+        function PopulateEventDetails() {
+            var starttime = document.getElementById("hlist");
+            var starttimeValue = starttime.options[starttime.selectedIndex].text;
+            var AppendDate = CheckinDate.substring(0, 10);
+            starttimeValue = AppendDate + "T" + starttimeValue + ":00";
+            AddEvent(EngineerName, CheckinDate, GlobalEvent, starttimeValue, starttimeValue, '', '');
+            StartLoad(EngineerName, CheckinDate, 1); // Load the data back to the remote DB
+
+        }
+
+        function Checkout() {
+            var NetworkStatus = SyncData1()
+            if (NetworkStatus == 1) {
+
+                var breakcount = checkbreakcount();
+                if (breakcount < 1) {  // If there is 1 or more break greater than 15 minutes it wouldn't let the users checkout until the gaps are filled
+                    GetLastStandStill(EngineerName, CheckinDate);
+                    GlobalEvent = "FINISH WORK";
+                    document.getElementById("Checkout").disabled = true;
+                    var breakcount = checkbreakcount();
+                    var DropDown = document.getElementById("hlist");
+                    DropDown.style.visibility = "visible";
+                    DropDown.style.display = "block";
+                }
+
+
+
+                else {
+                    alert(breakcount + " break(s) greater than 15 minutes. Please complete it with tasks");
+                    Reload();
+                }
+            }
+            else {
+                navigator.notification.alert('You need a data connection to perform this task', {}, 'Sync Fail', 'Ok');
+                }
+        }
+        function checkbreakcount() {
+            var count = localStorage.getItem("BreakCount");
+            return count;
+        }
+        function CheckOverTime(event, starttimevalue, endtimevalue, addtionalinfo) { // Events extending beyond midnight
+            var starttime = starttimevalue;
+            var endtime = endtimevalue;
+            if (starttime.toString().substring(0, 10) != endtime.toString().substring(0, 10)) { // Split the event from start time to 23:59 and 00:00 to endtime and add a checkout for the start date and checkin for end date
+                //DeleteRecord(EngineerName, CheckinDate, event, starttimevalue);
+                AddEvent(EngineerName, CheckinDate, event, starttimevalue, starttime.toString().substring(0, 10) + "T23:59:00", addtionalinfo, ''); //
+                AddEvent(EngineerName, CheckinDate, "FINISH WORK", starttime.toString().substring(0, 10) + "T23:59:00", starttime.toString().substring(0, 10) + "T23:59:00", '', '');
+                alert("Adding the new records");
+                window.localStorage.setItem("LastCheckinDate", endtime.toString().substring(0, 10) + "T00:00:00"); // Change the last check in date
+                window.localStorage.setItem("LastCheckinTime", endtime.toString().substring(0, 10) + "T00:00:00"); // change the last check in time
+                AddEvent(EngineerName, endtime.toString().substring(0, 10) + "T00:00:00", "START WORK", endtime.toString().substring(0, 10) + "T00:00:00", endtime.toString().substring(0, 10) + "T00:00:00", '', '');
+                AddEvent(EngineerName, endtime.toString().substring(0, 10) + "T00:00:00", event, (endtime.toString().substring(0, 10) + "T00:00:00"), endtimevalue, addtionalinfo, '');
+                StartLoad(EngineerName, starttime.toString().substring(0, 10) + "T00:00:00", 0);  // Load the data back to the remote DB for the day as there was a checkout event
+
+
+
+            }
+        }
+    </script>
+    <script>
+
+        function populateList(aList, aStartHour, aEndHour) {
+            var itemIndex = 0;
+            // firstly empty the list if it's got anthing in it.
+            while (aList.options.length > 0) {
+                aList.options.remove(0);
+            }
+            // now add the new items;
+            for (var h = aStartHour; (h < aEndHour) ; ++h) {
+                var hs = ((h < 10) ? "0" : "") + h;
+                // do the fifteen minute thing
+                for (var m = 0; (m < 60) ; m += 15) {
+                    var opt = document.createElement("OPTION");
+                    var ms = ((m < 10) ? "0" : "") + m;
+                    aList.options.add(opt);
+                    opt.value = "time" + itemIndex;
+                    opt.innerText = hs + ":" + ms;
+                    ++itemIndex;
+                }
+            }
+            return;
+        }
+
+        function ValidatestartTime(EventStartTime) {
+            var Checkindate = new DayPilot.Date(CheckinDate + "T" + CheckinTime);
+            if (Checkindate < EventStartTime) {
+                return 1;
+            }
+            else
+                return 0;
+
+        }
+        function GetTodayDate(DatetimeValue) {
+
+            var dd = DatetimeValue.getDate();
+            var mm = DatetimeValue.getMonth() + 1; //January is 0!
+            var yyyy = DatetimeValue.getFullYear();
+
+            if (dd < 10) {
+                dd = "0" + dd;
+
+            }
+
+            if (mm < 10) {
+                mm = "0" + mm;
+
+            }
+
+            var todaydate = yyyy + "-" + mm + "-" + dd + "T00:00:00";
+
+            return todaydate;
+        }
+    </script>
+
+</body>
+</html>

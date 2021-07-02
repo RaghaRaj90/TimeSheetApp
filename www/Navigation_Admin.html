@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Checkin</title>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no;" />
+    <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="js/ocrad.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="Content/bootstrap.css">
+    <script type="text/javascript" src="js/SyncDB.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/index.js"></script>
+    <script>
+
+        function Logout() {
+            navigator.notification.confirm(
+               "Are you sure you want to logout?",
+                callBackFunction, // Specify a function to be called
+                'Logout',
+                ["Cancel", "Ok"]
+        );
+        }
+        function callBackFunction(b) {
+            if (b != 1) {
+                window.localStorage.removeItem("username");
+                window.localStorage.removeItem("password");
+                window.location.href = 'index.html';
+            }
+        }
+    </script>
+    <script>
+        function SyncData() {
+            var networkState = navigator.connection.type;
+            var states = {};
+            states[Connection.UNKNOWN] = 'Unknown connection';
+            states[Connection.ETHERNET] = 'Ethernet connection';
+            states[Connection.WIFI] = 'WiFi connection';
+            states[Connection.CELL_2G] = 'Cell 2G connection';
+            states[Connection.CELL_3G] = 'Cell 3G connection';
+            states[Connection.CELL_4G] = 'Cell 4G connection';
+            states[Connection.CELL] = 'Cell generic connection';
+            states[Connection.NONE] = 'No network connection';
+            //alert('Connection type: ' + states[networkState]);
+            if (states[networkState] != "No network connection" && states[networkState] != "Unknown connection") {
+                GetExistingData();
+                //alert("Sync Done...");
+                navigator.notification.alert('Sync Done...', {}, 'Sync', 'Ok');
+            }
+            else {
+                //alert("You need a data connection to perform sync");
+                navigator.notification.alert('You need a data connection to perform sync', {}, 'Sync Fail', 'Ok');
+            }
+        }
+    </script>
+    <script>
+        function onLoad() {
+            startup();
+            populateList(document.getElementById("hlist"), 0, 24);
+            return;
+        }
+        function populateList(aList, aStartHour, aEndHour) { // Populate the Time Dropdown
+            var itemIndex = 0;
+            // firstly empty the list if it's got anthing in it.
+            while (aList.options.length > 0) {
+                aList.options.remove(0);
+            }
+            // now add the new items;
+            for (var h = aStartHour; (h < aEndHour) ; ++h) {
+                var hs = ((h < 10) ? "0" : "") + h;
+                // do the fifteen minute thing
+                for (var m = 0; (m < 60) ; m += 15) {
+                    var opt = document.createElement("OPTION");
+                    var ms = ((m < 10) ? "0" : "") + m;
+                    aList.options.add(opt);
+                    opt.value = "time" + itemIndex;
+                    opt.innerText = hs + ":" + ms;
+                    ++itemIndex;
+                }
+            }
+            return;
+        }
+
+    </script>
+
+
+
+</head>
+<body onload="onLoad();">
+    <br />
+    <div class="container body-content" style="font-family: Arial;">
+        <header>
+            <img src="img/logo.png" style="width:60%;height:9.30%" />
+            <br />
+            <br />
+        </header>
+
+        <div>
+            <h3> Welcome to the AGGORA timesheet app &ndash; a handy way to manage your timesheet on the go! </h3>
+            <br />
+        </div>
+
+            <div class="row">
+                <div >
+                    <div class="col-xs-6">
+                        Please enter the engineer name (case sensitive):
+
+                    </div>
+                    <div class="col-xs-6">
+                        <input type="text" id="EngName"/>
+                    </div>
+                </div>
+                <br/><br />
+                <div >
+                    <div class="col-xs-6">
+                        Please select the date:
+                    </div>
+                    <div class="col-xs-6">
+                        <input type="date" id="CheckinDate" required>
+                    </div>
+                </div>
+                <br/><br />
+                <div >
+                    <div class="col-xs-6 col-xs-offset-4">
+                        <input type="submit" value="Submit" style="height:40px;width:45%"  onclick="submit()" >
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <div id="footer">
+
+        <a href="" class="footerelem"><img src="img/sign-sync-icon.png" /></a>
+        <a href="javascript:window.location.href = 'About.html'" class="footerelem"><img src="img/FAQ-icon.png" /></a>
+        <a class="footerelem" href="tel://+44 0845 1177 999"><img src="img/04-Call-icon.png" /></a>
+        <a class="footerelem" href="javascript:Logout()"><img src="img/Lock-2-icon.png" /></a>
+
+    </div>
+    <script>
+        function submit() {
+            var EngName = document.getElementById("EngName").value
+            var CheckinDate = document.getElementById("CheckinDate").value;
+            CheckinDate = CheckinDate+"T00:00:00"
+            window.localStorage.setItem("EngineerName", EngName);
+            window.localStorage.setItem("LastCheckinDate", CheckinDate);
+            window.location.href = 'TimeSheet_Admin.html';
+        }
+    </script>
+
+</body>
+</html>
